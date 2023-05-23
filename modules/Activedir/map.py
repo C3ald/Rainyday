@@ -166,13 +166,4 @@ def collect(domain_controller_ip,username,domain, password=None, nthash='', lmha
         mapps.convert_graph()
         
 
-if __name__ == '__main__':
-        try:
-                op = sys.argv[1]
-                mapps = ADMap(username='s.blade', domain='coder.htb', password='AmcwNO60Zg3vca3o0HDrTC6D', domain_ip='10.10.11.207')
-                mapps.print_objs()
-                
-        except Exception as e:
-                #print(e)
-                collect(domain_controller_ip='10.10.11.207', domain='coder.htb', username='s.blade', password='AmcwNO60Zg3vca3o0HDrTC6D')
         
