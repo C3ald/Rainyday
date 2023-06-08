@@ -40,6 +40,8 @@ def processRecord_users(item):
                 if str(attribute['type']) == 'sAMAccountName':
                     if attribute['vals'][0].asOctets().decode('utf-8').endswith('$') is False:
                         # User Account
+                        if str(attribute['type']) == 'description':
+                                description = str(attribute['vals'][0])
                         sAMAccountName = attribute['vals'][0].asOctets().decode('utf-8')
                         
                         
@@ -90,7 +92,7 @@ class MapV2:
                 print(self.root)
                 self.ldapConnection = ldap.LDAPConnection('ldap://%s' % self.dc, baseDN=self.root, dstIp=dc)
                 print(self.ldapConnection.kerberosLogin(username, password, domain=domain, kdcHost=dc))
-                self.network = Network(height='82vh', directed=True, bgcolor='black', heading=domain,font_color='lightgrey',select_menu=True, neighborhood_highlight=True, notebook=False, cdn_resources='local')
+                self.network = Network(height='82vh', directed=True, bgcolor='#222222', heading=domain,font_color='white',select_menu=True, neighborhood_highlight=True, notebook=False, cdn_resources='local')
                 self.network.repulsion(node_distance=400, spring_length=300)
                 self.network.barnes_hut(gravity=-4000, central_gravity=0.05, spring_length=100)
   
@@ -124,8 +126,12 @@ TRUSTED_TO_AUTH_FOR_DELEGATION 	0x1000000 	16777216
 PARTIAL_SECRETS_ACCOUNT 	0x04000000 	67108864
 """
                 entries = self.ldapConnection.search(searchFilter='(objectClass=*)', typesOnly=False)
-                self.network.font_color = 'grey'
+                #self.network.font_color = 'lightgrey'
                 self.network.set_edge_smooth('continuous')
+                self.network.toggle_hide_edges_on_drag(True)
+                self.network.inherit_edge_colors(True)
+                self.network.filter_menu = True
+                self.network.select_menu = True
                 self.network.toggle_drag_nodes(True)
                 account_security = {'1':"SCRIPT",'2':"ACCOUNTDISABLE",'8':"HOMEDIR_REQUIRED",'16':"LOCKOUT",'32':"PASSWD NOTREQD",'64':"PASSWD_CANT_CHANGE"
                                     ,'128':'ENCRYPTED_TEXT_PWD_ALLOWED','256':'TEMP_DUPLICATE_ACCOUNT','512':'NORMAL_ACCOUNT','2048':'INTERDOMAIN_TRUST_ACCOUNT',
@@ -135,34 +141,44 @@ PARTIAL_SECRETS_ACCOUNT 	0x04000000 	67108864
                 for entry in entries:
                         try:
                                 for attributes in entry['attributes']:
+                                        if str(attributes['type']) == 'description':
+                                                description = str(attributes['vals'][0])
+                                                self.network.add_node(description, color='black', label=description, title='description')
+
+
+                                        
                                         if str(attributes['type']) == 'distinguishedName':
                                                 if attributes['vals'][0].asOctets().decode('utf-8').endswith('$') is False:
                                                         # User Account
                                                         distinguishedName = attributes['vals'][0].asOctets().decode('utf-8')
                                                         self.network.add_node(distinguishedName, color='purple', label=distinguishedName, title='DN')
+                                                        self.network.add_edge(to=description, source=distinguishedName, color='cyan', title='description')
+
+
                                         
                                         if str(attributes['type']) == 'sAMAccountName':
                                                 if attributes['vals'][0].asOctets().decode('utf-8').endswith('$') is False:
                                                         # User Account
                                                         sAMAccountName = attributes['vals'][0].asOctets().decode('utf-8')
+                                                        
                                                         self.network.add_node(sAMAccountName, color='lime', label=sAMAccountName, title='User')
-                                                        self.network.add_edge(distinguishedName, sAMAccountName, color='lightgrey', label='username')
-                                        
+                                                        self.network.add_edge(distinguishedName, sAMAccountName, color='lightgrey', title='username')
+
                                         if str(attributes['type']) == 'ntSecurityDescriptor':
                                                 security = str(attributes['vals'][0])
                                                 self.network.add_node(security, color='grey', label=security, title='security permissions')
-                                                self.network.add_edge(distinguishedName, security, color='green', label='ntSecurityDescriptor')
+                                                self.network.add_edge(distinguishedName, security, color='green', title='ntSecurityDescriptor')
                                                 
                                         if str(attributes['type']) == 'memberOf':
                                                 groups = str(attributes['vals'][0])
                                                 self.network.add_node(groups, color='grey', label=groups, title='groups')
-                                                self.network.add_edge(distinguishedName, groups, color='blue', label='groups')
+                                                self.network.add_edge(distinguishedName, groups, color='blue', title='groups')
                                                 
                                         if str(attributes['type']) == 'userAccountControl':
                                                 userAccountControl = str(attributes['vals'][0])
                                                 userAccountControl = account_security[userAccountControl]
                                                 self.network.add_node(userAccountControl, color='grey', label=userAccountControl, title='userAccountControl')
-                                                self.network.add_edge(distinguishedName, userAccountControl, color='white', label='userAccountControl')
+                                                self.network.add_edge(distinguishedName, userAccountControl, color='white', title='userAccountControl')
                                         
                         
                         
