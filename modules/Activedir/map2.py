@@ -137,13 +137,17 @@ PARTIAL_SECRETS_ACCOUNT 	0x04000000 	67108864
                                     ,'128':'ENCRYPTED_TEXT_PWD_ALLOWED','256':'TEMP_DUPLICATE_ACCOUNT','512':'NORMAL_ACCOUNT','2048':'INTERDOMAIN_TRUST_ACCOUNT',
                                     '4096':'WORKSTATION_TRUST_ACCOUNT','8192':'SERVER_TRUST_ACCOUNT','65536':'DONT_EXPIRE_PASSWORD','131072':'MNS_LOGON_ACCOUNT',
                                     '262144':'SMARTCARD_REQUIRED','524288':'TRUSTED_FOR_DELEGATION','1048576':'NOT_DELEGATED','2097152':'USE_DES_KEY_ONLY',
-                                    '4194304':'DONT_REQ_PREAUTH','8388608':'PASSWORD_EXPIRED','67108864':'TRUSTED_TO_AUTH_FOR_DELEGATION'}
+                                    '4194304':'DONT_REQ_PREAUTH','8388608':'PASSWORD_EXPIRED','67108864':'TRUSTED_TO_AUTH_FOR_DELEGATION','66048':"Enabled, Password Doesn't Expire",
+                                    '514':"Disabled Account", '66082':"Disabled, Password Doesn't Expire & Not Required",'532480':'Domain controller','4260352':"Enabled - Password Does Not Expire - PreAuthorization Not Required"}
                 for entry in entries:
                         try:
                                 for attributes in entry['attributes']:
                                         if str(attributes['type']) == 'description':
                                                 description = str(attributes['vals'][0])
                                                 self.network.add_node(description, color='black', label=description, title='description')
+
+                                        else:
+                                                description = None
 
 
                                         
@@ -152,7 +156,8 @@ PARTIAL_SECRETS_ACCOUNT 	0x04000000 	67108864
                                                         # User Account
                                                         distinguishedName = attributes['vals'][0].asOctets().decode('utf-8')
                                                         self.network.add_node(distinguishedName, color='purple', label=distinguishedName, title='DN')
-                                                        self.network.add_edge(to=description, source=distinguishedName, color='cyan', title='description')
+                                                        if description:
+                                                                self.network.add_edge(to=description, source=distinguishedName, color='cyan', title='description')
 
 
                                         
@@ -177,7 +182,7 @@ PARTIAL_SECRETS_ACCOUNT 	0x04000000 	67108864
                                         if str(attributes['type']) == 'userAccountControl':
                                                 userAccountControl = str(attributes['vals'][0])
                                                 userAccountControl = account_security[userAccountControl]
-                                                self.network.add_node(userAccountControl, color='grey', label=userAccountControl, title='userAccountControl')
+                                                self.network.add_node(userAccountControl, color='red', label=userAccountControl, title='userAccountControl')
                                                 self.network.add_edge(distinguishedName, userAccountControl, color='white', title='userAccountControl')
                                         
                         
