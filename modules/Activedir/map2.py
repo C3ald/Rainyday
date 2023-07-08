@@ -19,9 +19,13 @@ from networkx import Graph, spring_layout, ego_graph, graph
 from pyvis.options import Options
 from networkx import nx_agraph
 import asyncio
+import networkx as nx
 import random
-
+import json
+import py4cytoscape as p4c
+import plotly.graph_objects as go
 size = 150/3
+
 class MapV2:
         def __init__(self, domain, dc, username, password,lmhash='',nthash='', kerberos=False):
                 self.username = username
@@ -59,8 +63,8 @@ class MapV2:
                                         for entry in result['attributes']:
                                                 if str(entry['type']) == 'description':
                                                         description = str(entry['vals'][0])
-                                                        node_size = 0.05 * len(description)*size
-                                                        self.network.add_node(description, title=description, color='white', label=description, size=node_size, id='description')
+#node_size = 0.05 * len(description)*size
+                                                        self.network.add_node(description, title=description, color='white', label=description, group=dn)#node_size, id='description')
                                                         self.add_edge(description, dn, **options)
                                 except:
                                         None
@@ -76,7 +80,7 @@ class MapV2:
                 return None
         
         def add_edge(self, to, source, **options):
-                self.network.add_edge(source, to,**options)
+                self.network.add_edge(source, to,**options,group=source)
         
         
         def MAP(self):
@@ -97,10 +101,11 @@ class MapV2:
                                     '514':"Disabled Account", '66082':"Disabled, Password Doesn't Expire & Not Required",'532480':'Domain controller','4260352':"Enabled - Password Does Not Expire - PreAuthorization Not Required (RISK)",
                                     "66080":"Disabled, Password Doesn’t Expire & Not Required",'546':'Disabled, Password Not Required'}
                 description=None
+                sAMAccountName=None
                 for entry in entries:
                         try:
                                 for attributes in entry['attributes']:
-                                       
+                        
                                         # else:
                                         #         description = None
 
@@ -111,9 +116,9 @@ class MapV2:
                                                         # User Account
                                                         
                                                         distinguishedName = attributes['vals'][0].asOctets().decode('utf-8')
-                                                        node_size = 0.05 * len(distinguishedName)*size
-                                                        self.network.add_node(distinguishedName, color='purple', label=distinguishedName, title=distinguishedName, size=node_size, id='distinguishedName')
-                                                        description = asyncio.run(self.query_description(distinguishedName,color='purple', title='description', label='description', weight=node_size*.3*2))
+#node_size = 0.05 * len(distinguishedName)*size
+                                                        self.network.add_node(distinguishedName, color='purple', label=distinguishedName, title=distinguishedName, group=distinguishedName)#node_size, id='distinguishedName')
+                                                        description = asyncio.run(self.query_description(distinguishedName,color='purple', title='description', label='description'))
                                                         
                                                                 # self.network.add_edge(to=description, source=distinguishedName, color='lime', title='description')
 
@@ -124,49 +129,60 @@ class MapV2:
                                                         # User Account
                                                         sAMAccountName = attributes['vals'][0].asOctets().decode('utf-8')
                                                         print(f'Found user: {sAMAccountName}')
-                                                        node_size = 0.5 * len(sAMAccountName)*size
-                                                        print(node_size)
-                                                        self.network.add_node(sAMAccountName, color='lime', label=sAMAccountName, title=sAMAccountName, size=node_size, id='sAMAccountName')
-                                                        self.network.add_edge(distinguishedName, sAMAccountName, color='lime', title='user', weight=node_size*.3, label='user')
+#node_size = 0.5 * len(sAMAccountName)*size
+                                                #node_size)
+                                                        self.network.add_node(sAMAccountName, color='lime', label=sAMAccountName, title=sAMAccountName, group=distinguishedName)#node_size, id='sAMAccountName')
+                                                        self.network.add_edge(distinguishedName, sAMAccountName, color='lime', title='user', label='user', group=distinguishedName)
                                                         # if description:
                                                         #         self.network.add_edge(to=description, source=sAMAccountName, color='lime', title='description')
 
                                         if str(attributes['type']) == 'ntSecurityDescriptor':
-                                                security = str(attributes['vals'][0])
-                                                node_size = 0.05*len(security)*size
-                                                print(node_size)
-                                                self.network.add_node(security, color='orange', label=security, title=security, size=node_size, id='ntSecurityDescriptor')
-                                                
-                                                self.network.add_edge(distinguishedName, security, color='orange', title='ntSecurityDescriptor', weight=node_size*.3*2, label='ntSecurityDescriptor')
+                                                security = str(attributes['vals'][0])#node_size = 0.05*len(security)*size
+                                        #node_size)
+                                                self.network.add_node(security, color='orange', label=security, title=security, group=distinguishedName)#node_size, id='ntSecurityDescriptor')
+                                                if sAMAccountName:
+                                                        self.network.add_edge(sAMAccountName, security, color='orange', title='ntSecurityDescriptor', label='ntSecurityDescriptor', group=distinguishedName)
+                                                else:
+                                                        self.network.add_edge(distinguishedName,security, color='orange', title='ntSecurityDescriptor', label='ntSecurityDescriptor', group=distinguishedName)
                                                 # if description:
                                                 #         self.network.add_edge(to=description, source=security, color='lime', title='description')
                                                 
                                         if str(attributes['type']) == 'memberOf':
                                                 groups = str(attributes['vals'][0])
-                                                node_size = 0.05 * len(groups)*size
-                                                self.network.add_node(groups, color='lightgrey', label=groups, title=groups, size=node_size, id='groups')
-                                                self.network.add_edge(distinguishedName, groups, color='lightgrey', title='groups', weight=node_size*.3*2, label='groups')
+                                                all_groups = groups.split(',')
+                                                for group in all_groups:
+                                                        group = group[3:]
+                                                        self.network.add_node(group, color='lightgrey', label=group, title=group, group=distinguishedName)#node_size, id='group')
+
+                                                        
+#node_size = 0.05 * len(group)*size
+                                                        
+                                                        if sAMAccountName:
+                                                                self.network.add_edge(sAMAccountName, group, color='lightgrey', title='group', label='group', group=sAMAccountName)
+                                                        else:
+                                                                if distinguishedName:
+                                                                        self.network.add_edge(distinguishedName, group, color='lightgrey', title='group', label='group', group=distinguishedName)
                                                 # if description:
                                                 #         self.network.add_edge(to=description, source=groups, color='lime', title='description')
                                                 
                                         if str(attributes['type']) == 'userAccountControl':
                                                 userAccountControlnum = str(attributes['vals'][0].asOctets().decode('utf-8'))
                                                 #print(userAccountControlnum)
-                                                userAccountControl = account_security[userAccountControlnum]
-                                                node_size = 0.05 * len(userAccountControl)*size
-                                                self.network.add_node(userAccountControlnum, color='red', label=userAccountControlnum, title=userAccountControl, size=node_size, id="userAccountControlnum")
-                                                self.network.add_edge(distinguishedName, userAccountControlnum, color='red', title=userAccountControl, label='userAccountControl', weight=node_size*.3*2)
+                                                userAccountControl = account_security[userAccountControlnum]#node_size = 0.05 * len(userAccountControl)*size
+                                                self.network.add_node(userAccountControl, color='red', label=userAccountControlnum, title=userAccountControl, group=distinguishedName)#node_size, id="userAccountControlnum")
+                
+                                                self.network.add_edge(distinguishedName, userAccountControlnum, color='red', title=userAccountControl, label='userAccountControl', group=distinguishedName)
                                                 # if description:
                                                 #         self.network.add_edge(to=description, source=userAccountControlnum, color='lime', title='description')
                                         
                                         if str(attributes['type']) == 'allowedAttributesEffective':
-                                                perm = str(attributes['vals'][0])
-                                                node_size = 0.05 * len(perm)*size
-                                                self.network.add_edge(distinguishedName,sAMAccountName, title=perm,label=perm, weight=node_size*.3*2, color='yellow')
+                                                perm = str(attributes['vals'][0])#node_size = 0.05 * len(perm)*size
+                                                
+                                                self.network.add_edge(distinguishedName,sAMAccountName, title=perm,label=perm, color='yellow')
                                         
                                         if str(attributes['type']) == 'allowedChildClassesEffective':
                                                 childperm = str(attributes['vals'][0])
-                                                self.network.add_edge(distinguishedName, sAMAccountName, title=childperm,label=childperm, weight=node_size*.3*2, color='yellow')
+                                                self.network.add_edge(distinguishedName, sAMAccountName, title=childperm,label=childperm, color='yellow')
 
 
                         
@@ -186,10 +202,102 @@ class MapV2:
                 network_graph.toggle_physics(True)
                 network_graph.write_html(save_file + '.html')
                 
-                
                                 
+        def three_D(self):
+                graph = self.network
+                pos = nx.spring_layout(graph, dim=3, k=0.25)
+                node_colors = []  # Create an empty list to store node colors
+                group_colors = {}
+
+                # Iterate over nodes
+                for node in graph.nodes():
+                        node_color = 'blue'  # Set a default node color
+                        try:
+                                group = graph.nodes[node]
+                                group = group['group']
                         
+                        # Assign a random color to each group if not already assigned
+                                if group not in group_colors:
+                                        group_colors[group] = f"rgb({random.randint(0, 255)}, {random.randint(0, 255)}, {random.randint(0, 255)})"
+                        
+                                node_color = group_colors[group]
+                        except Exception as e:
+                                print(e)
+                                print(group)
+                                node_color = 'grey'
+                        node_colors.append(node_color)
+
+                edge_colors = []  # Create an empty list to store edge colors
+
+                # Iterate over edges
+                for node1, node2 in graph.edges():
+                        edge_color = 'gray'  # Set a default edge color
+                        
+                        # Check if the edge has a specific color attribute
+                        if 'color' in graph[node1][node2]:
+                                edge_color = graph[node1][node2]['color']
+                        edge_colors.append(edge_color)
+
+                x = [pos[node][0] for node in graph.nodes()]
+                y = [pos[node][1] for node in graph.nodes()]
+                z = [pos[node][2] for node in graph.nodes()]
+
+                edge_trace = go.Scatter3d(
+                        x=[pos[node1][0] for node1, node2 in graph.edges()] + [None],
+                        y=[pos[node1][1] for node1, node2 in graph.edges()] + [None],
+                        z=[pos[node1][2] for node1, node2 in graph.edges()] + [None],
+                        mode='lines',
+                        line=dict(
+                        color=edge_colors,  # Use the individual edge colors
+                        width=1
+                        ),
+                        hoverinfo='none'
+                )
+
+                node_trace = go.Scatter3d(
+                        x=x,
+                        y=y,
+                        z=z,
+                        mode='markers',
+                        marker=dict(
+                        size=10,
+                        color=node_colors,  # Use the individual node colors
+                        symbol='circle'
+                        ),
+                        text=[str(node) for node in graph.nodes()],
+                        hovertemplate='Node: %{text}<br>Node ID: %{marker.symbol}',
+                )
+
+                layout = go.Layout(
+                        title='Directed Graph',
+                        showlegend=False,
+                        scene=dict(
+                        xaxis=dict(title='X', showgrid=False, showticklabels=False, visible=False),
+                        yaxis=dict(title='Y', showgrid=False, showticklabels=False, visible=False),
+                        zaxis=dict(title='Z', showgrid=False, showticklabels=False, visible=False),
+                        bgcolor='#222222'
+                        ),
+                        clickmode='event+select'
+                )
+                fig = go.Figure(data=[node_trace, edge_trace],layout=layout)
+                #fig.show()
+                fig.write_html('graph.html',auto_open=True,default_width='100%',default_height='100%')
+
+                #p4c.cytoscape_ping()
+                
+                # network_list = p4c.get_network_list()
+                # network_suid = network_list[0]
+                # print(network_suid)
+                # p4c.set_visual_style('Sample3D', network=network_suid)
+                # p4c.layout_network('force-directed', network=network_suid)
+                # p4c.create_network_from_networkx(graph)
+                        # cy_data = nx.readwrite.json_graph.cytoscape_data(self.network)
+                        # cy_elements = cy_data["elements"]
+                        # for node in cy_elements["nodes"]:
+                        #         node["data"]["id"] = str(node["data"]["id"])
 
 
-m = MapV2(domain='megacorp.local', dc='10.10.10.179', username='sbauer', password="D3veL0pM3nT!", kerberos=False)
+
+m = MapV2(domain='support.htb', dc='10.10.11.174', username='support', password="Ironside47pleasure40Watchful", kerberos=False)
 m.MAP()
+m.three_D()
