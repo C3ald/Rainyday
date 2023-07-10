@@ -50,8 +50,6 @@ class MapV2:
                         self.ldapConnection.login(user=username, password=password, domain=domain, lmhash=lmhash, nthash=nthash)
                 self.network = Graph()
                 
-                #self.network.repulsion(node_distance=400, spring_length=300)
-                #self.network.barnes_hut(gravity=-4000, central_gravity=0.05, spring_length=100)
   
         
         async def query_description(self, dn,**options):
@@ -68,14 +66,6 @@ class MapV2:
                                                         self.add_edge(description, dn, **options)
                                 except:
                                         None
-                        # entry = result[0]
-                        # if 'attributes' in entry:
-                        #         attributes = entry['attributes']
-                        #         for attribute in attributes:
-                        #                 if attribute['type'] == 'description':
-                        #                         description = attribute['vals'][0]
-                        #                         self.add_edge(to=str(description), source=dn, **kwargs)
-                        #                         return str(description)
                         
                 return None
         
@@ -86,13 +76,6 @@ class MapV2:
         def MAP(self):
                 """ Maps the ad domain """
                 entries = self.ldapConnection.search(searchFilter='(objectClass=*)', typesOnly=False, searchBase=self.root)
-                #self.network.font_color = 'lightgrey'
-                #self.network.set_edge_smooth('continuous')
-                #self.network.toggle_hide_edges_on_drag(True)
-                #self.network.inherit_edge_colors(True)
-                #self.network.filter_menu = True
-                #self.network.select_menu = True
-                #self.network.toggle_drag_nodes(True)
                 account_security = {'1':"SCRIPT",'2':"ACCOUNTDISABLE",'8':"HOMEDIR_REQUIRED",'16':"LOCKOUT",'32':"PASSWORD NOT REQUIRED (DANGEROUS)",'64':"PASSWD_CANT_CHANGE"
                                     ,'128':'ENCRYPTED_TEXT_PWD_ALLOWED','256':'TEMP_DUPLICATE_ACCOUNT (RISK)','512':'NORMAL_ACCOUNT','2048':'INTERNAL DOMAIN_TRUST ACCOUNT (RISK',
                                     '4096':'WORKSTATION_TRUST_ACCOUNT','8192':'SERVER_TRUST_ACCOUNT','65536':'DONT_EXPIRE_PASSWORD (DANGEROUS)','131072':'MNS_LOGON_ACCOUNT',
@@ -280,24 +263,8 @@ class MapV2:
                         clickmode='event+select'
                 )
                 fig = go.Figure(data=[node_trace, edge_trace],layout=layout)
-                #fig.show()
                 fig.write_html('graph.html',auto_open=True,default_width='100%',default_height='100%')
-
-                #p4c.cytoscape_ping()
-                
-                # network_list = p4c.get_network_list()
-                # network_suid = network_list[0]
-                # print(network_suid)
-                # p4c.set_visual_style('Sample3D', network=network_suid)
-                # p4c.layout_network('force-directed', network=network_suid)
-                # p4c.create_network_from_networkx(graph)
-                        # cy_data = nx.readwrite.json_graph.cytoscape_data(self.network)
-                        # cy_elements = cy_data["elements"]
-                        # for node in cy_elements["nodes"]:
-                        #         node["data"]["id"] = str(node["data"]["id"])
-
 
 
 m = MapV2(domain='support.htb', dc='10.10.11.174', username='support', password="Ironside47pleasure40Watchful", kerberos=False)
 m.MAP()
-m.three_D()
