@@ -266,5 +266,4 @@ class MapV2:
                 fig.write_html('graph.html',auto_open=True,default_width='100%',default_height='100%')
 
 
-m = MapV2(domain='support.htb', dc='10.10.11.174', username='support', password="Ironside47pleasure40Watchful", kerberos=False)
-m.MAP()
+
